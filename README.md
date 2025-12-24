@@ -43,6 +43,7 @@ Contributions welcome! Please open an issue or submit a pull request.
 
 ## Related Packages
 
+- [design-tokens](https://github.com/gnorium/design-tokens) - Universal design tokens based on Apple HIG and Wikimedia Codex
 - [web-builders](https://github.com/gnorium/web-builders) - HTML, CSS, JS, and SVG DSL builders
 - [web-types](https://github.com/gnorium/web-types) - Shared web types and design tokens
 - [web-formats](https://github.com/gnorium/web-formats) - Structured data format builders
