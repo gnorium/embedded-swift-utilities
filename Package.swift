@@ -26,8 +26,7 @@ let package = Package(
                 .enableUpcomingFeature("ExistentialAny"),
                 .enableUpcomingFeature("ForwardTrailingClosures"),
                 .enableUpcomingFeature("ImplicitOpenExistentials"),
-                .enableUpcomingFeature("StrictConcurrency"),
-                .unsafeFlags(["-warn-concurrency"], .when(configuration: .debug)),
+                .enableUpcomingFeature("StrictConcurrency")
             ]
         ),
         .testTarget(
