@@ -1,6 +1,6 @@
 .DS_Store
 /.build
-/Packages
+/Packages/
 xcuserdata/
 DerivedData/
 .swiftpm/configuration/registries.json
@@ -8,3 +8,4 @@ DerivedData/
 .netrc
 *.xcodeproj
 *~
+/Package.resolved
