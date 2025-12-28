@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "EmbeddedSwiftUtilities",
+    name: "embedded-swift-utilities",
     platforms: [
         .macOS(.v14),
         .iOS(.v17),
