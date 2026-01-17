@@ -294,30 +294,36 @@ public func intToString(_ value: Int) -> String {
 
 /// Convert Double to String without Unicode normalization (simplified)
 public func doubleToString(_ value: Double) -> String {
-	let intPart = Int(value)
-	let intStr = intToString(intPart)
+    // Robustness: handle NaN and Inf (simple check)
+    if value != value { return "0.000" }
+    // Hard limit to avoid Int overflow crashes
+    if value > 2000000.0 || value < -2000000.0 { return "0.000" }
 
-	let fracPart = value - Double(intPart)
-	if fracPart != 0 {
-		var frac = abs(fracPart)
-		var fracBytes: [UInt8] = []
-		// Limit precision to avoid infinite loops/long strings
-		for _ in 0..<6 {
-			if frac == 0 { break }
-			frac *= 10
-			let digit = Int(frac)
-			fracBytes.append(48 + UInt8(digit))
-			frac -= Double(digit)
-		}
-
-		// Build result without using += operator
-		var resultBytes: [UInt8] = []
-		resultBytes.append(contentsOf: intStr.utf8)
-		resultBytes.append(46) // '.'
-		resultBytes.append(contentsOf: fracBytes)
-		return String(decoding: resultBytes, as: UTF8.self)
-	}
-	return intStr
+    let intV = Int(value * 1000.0)
+    let isNeg = intV < 0
+    let absV = isNeg ? -intV : intV
+    
+    let s = intToString(absV)
+    var res: [UInt8] = []
+    if isNeg { res.append(45) } // '-'
+    
+    let bytes = Array(s.utf8)
+    if bytes.count <= 3 {
+        res.append(48) // '0'
+        res.append(46) // '.'
+        if bytes.count < 3 {
+            for _ in 0..<(3 - bytes.count) {
+                res.append(48) // '0'
+            }
+        }
+        res.append(contentsOf: bytes)
+    } else {
+        let splitAt = bytes.count - 3
+        res.append(contentsOf: bytes[0..<splitAt])
+        res.append(46) // '.'
+        res.append(contentsOf: bytes[splitAt...])
+    }
+    return String(decoding: res, as: UTF8.self)
 }
 
 
