@@ -27,6 +27,21 @@ public func stringEquals(_ string: String, _ staticString: StaticString) -> Bool
     }
 }
 
+/// Lexicographic comparison by UTF-8 bytes (safe for ASCII strings like ISO 8601 timestamps)
+public func stringLessThanOrEqual(_ lhs: String, _ rhs: String) -> Bool {
+	var li = lhs.utf8.makeIterator()
+	var ri = rhs.utf8.makeIterator()
+	while true {
+		let l = li.next()
+		let r = ri.next()
+		if l == nil && r == nil { return true }  // equal
+		if l == nil { return true }               // lhs shorter = less
+		if r == nil { return false }              // rhs shorter = less
+		if l! < r! { return true }
+		if l! > r! { return false }
+	}
+}
+
 public func stringContains(_ haystack: String, _ needle: String) -> Bool {
     return stringIndexOf(haystack, needle) != nil
 }
@@ -339,7 +354,7 @@ public func stringJoin(_ parts: [String], separator: String) -> String {
 	if parts.isEmpty { return "" }
 	var buffer: [UInt8] = []
 	let sepBytes = Array(separator.utf8)
-	
+
 	for (index, part) in parts.enumerated() {
 		if index > 0 {
 			buffer.append(contentsOf: sepBytes)
@@ -347,6 +362,73 @@ public func stringJoin(_ parts: [String], separator: String) -> String {
 		buffer.append(contentsOf: part.utf8)
 	}
 	return String(decoding: buffer, as: UTF8.self)
+}
+
+/// Encode string to base64 (WASM-safe, no Foundation dependency)
+public func base64Encode(_ string: String) -> String {
+	let input = Array(string.utf8)
+	if input.isEmpty { return "" }
+	let table: [UInt8] = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".utf8)
+	var result: [UInt8] = []
+	var i = 0
+	while i + 2 < input.count {
+		let b0 = input[i], b1 = input[i + 1], b2 = input[i + 2]
+		result.append(table[Int(b0 >> 2)])
+		result.append(table[Int((b0 & 0x03) << 4 | b1 >> 4)])
+		result.append(table[Int((b1 & 0x0F) << 2 | b2 >> 6)])
+		result.append(table[Int(b2 & 0x3F)])
+		i += 3
+	}
+	let remaining = input.count - i
+	if remaining == 1 {
+		let b0 = input[i]
+		result.append(table[Int(b0 >> 2)])
+		result.append(table[Int((b0 & 0x03) << 4)])
+		result.append(61) // '='
+		result.append(61)
+	} else if remaining == 2 {
+		let b0 = input[i], b1 = input[i + 1]
+		result.append(table[Int(b0 >> 2)])
+		result.append(table[Int((b0 & 0x03) << 4 | b1 >> 4)])
+		result.append(table[Int((b1 & 0x0F) << 2)])
+		result.append(61) // '='
+	}
+	return String(decoding: result, as: UTF8.self)
+}
+
+/// Decode base64 encoded string to original string (WASM-safe, no Unicode normalization)
+public func base64Decode(_ encoded: String) -> String {
+	let input = Array(encoded.utf8)
+	if input.isEmpty { return "" }
+	var bytes: [UInt8] = []
+	var buffer: UInt32 = 0
+	var bitsCollected = 0
+	for byte in input {
+		// Stop at padding
+		if byte == 61 { break } // '='
+		// Decode base64 character to 6-bit value
+		let value: UInt8
+		if byte >= 65 && byte <= 90 { // A-Z
+			value = byte - 65
+		} else if byte >= 97 && byte <= 122 { // a-z
+			value = byte - 97 + 26
+		} else if byte >= 48 && byte <= 57 { // 0-9
+			value = byte - 48 + 52
+		} else if byte == 43 { // +
+			value = 62
+		} else if byte == 47 { // /
+			value = 63
+		} else {
+			continue // Skip invalid characters
+		}
+		buffer = (buffer << 6) | UInt32(value)
+		bitsCollected += 6
+		if bitsCollected >= 8 {
+			bitsCollected -= 8
+			bytes.append(UInt8((buffer >> bitsCollected) & 0xFF))
+		}
+	}
+	return String(decoding: bytes, as: UTF8.self)
 }
 
 #endif
