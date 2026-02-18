@@ -29,17 +29,20 @@ public func stringEquals(_ string: String, _ staticString: StaticString) -> Bool
 
 /// Lexicographic comparison by UTF-8 bytes (safe for ASCII strings like ISO 8601 timestamps)
 public func stringLessThanOrEqual(_ lhs: String, _ rhs: String) -> Bool {
-	var li = lhs.utf8.makeIterator()
-	var ri = rhs.utf8.makeIterator()
-	while true {
-		let l = li.next()
-		let r = ri.next()
-		if l == nil && r == nil { return true }  // equal
-		if l == nil { return true }               // lhs shorter = less
-		if r == nil { return false }              // rhs shorter = less
-		if l! < r! { return true }
-		if l! > r! { return false }
+	return stringCompare(lhs, rhs) <= 0
+}
+
+/// Lexicographic comparison by UTF-8 bytes. Returns negative if lhs < rhs, 0 if equal, positive if lhs > rhs.
+public func stringCompare(_ lhs: String, _ rhs: String) -> Int {
+	let bytesA = Array(lhs.utf8)
+	let bytesB = Array(rhs.utf8)
+	let minLen = bytesA.count < bytesB.count ? bytesA.count : bytesB.count
+	for i in 0..<minLen {
+		if bytesA[i] != bytesB[i] {
+			return Int(bytesA[i]) - Int(bytesB[i])
+		}
 	}
+	return bytesA.count - bytesB.count
 }
 
 public func stringContains(_ haystack: String, _ needle: String) -> Bool {
@@ -429,6 +432,89 @@ public func base64Decode(_ encoded: String) -> String {
 		}
 	}
 	return String(decoding: bytes, as: UTF8.self)
+}
+
+/// Convert a hex ASCII byte to its numeric value (0-15), or -1 if invalid.
+public func hexVal(_ byte: UInt8) -> Int {
+	if byte >= 48 && byte <= 57 { return Int(byte - 48) }       // 0-9
+	if byte >= 65 && byte <= 70 { return Int(byte - 55) }       // A-F
+	if byte >= 97 && byte <= 102 { return Int(byte - 87) }      // a-f
+	return -1
+}
+
+/// Decodes literal \uXXXX sequences in already-decoded text.
+/// Uses manual UTF-8 encoding to avoid Unicode.Scalar (unavailable in Embedded Swift).
+/// Handles surrogate pairs (\uD800\uDC00 → single codepoint).
+public func decodeUnicodeEscapes(_ text: String) -> String {
+	let bytes = Array(text.utf8)
+	guard bytes.count >= 6 else { return text }
+
+	var result: [UInt8] = []
+	result.reserveCapacity(bytes.count)
+	var i = 0
+	var hasEscapes = false
+
+	while i < bytes.count {
+		// Check for \uXXXX pattern (backslash = 92, u = 117)
+		if bytes[i] == 92 && i + 5 < bytes.count && bytes[i + 1] == 117 {
+			let h3 = hexVal(bytes[i + 2])
+			let h2 = hexVal(bytes[i + 3])
+			let h1 = hexVal(bytes[i + 4])
+			let h0 = hexVal(bytes[i + 5])
+			if h3 >= 0 && h2 >= 0 && h1 >= 0 && h0 >= 0 {
+				var codepoint = UInt32(h3) << 12 | UInt32(h2) << 8 | UInt32(h1) << 4 | UInt32(h0)
+
+				// Handle surrogate pairs: \uD800-\uDBFF followed by \uDC00-\uDFFF
+				var consumedExtra = 0
+				if codepoint >= 0xD800 && codepoint <= 0xDBFF && i + 11 < bytes.count
+					&& bytes[i + 6] == 92 && bytes[i + 7] == 117 {
+					let l3 = hexVal(bytes[i + 8])
+					let l2 = hexVal(bytes[i + 9])
+					let l1 = hexVal(bytes[i + 10])
+					let l0 = hexVal(bytes[i + 11])
+					if l3 >= 0 && l2 >= 0 && l1 >= 0 && l0 >= 0 {
+						let low = UInt32(l3) << 12 | UInt32(l2) << 8 | UInt32(l1) << 4 | UInt32(l0)
+						if low >= 0xDC00 && low <= 0xDFFF {
+							codepoint = 0x10000 + (codepoint - 0xD800) * 0x400 + (low - 0xDC00)
+							consumedExtra = 6
+						}
+					}
+				}
+
+				// Skip lone surrogates
+				if codepoint >= 0xD800 && codepoint <= 0xDFFF {
+					result.append(bytes[i])
+					i += 1
+					continue
+				}
+
+				// Manual UTF-8 encode
+				if codepoint <= 0x7F {
+					result.append(UInt8(codepoint))
+				} else if codepoint <= 0x7FF {
+					result.append(UInt8(0xC0 | (codepoint >> 6)))
+					result.append(UInt8(0x80 | (codepoint & 0x3F)))
+				} else if codepoint <= 0xFFFF {
+					result.append(UInt8(0xE0 | (codepoint >> 12)))
+					result.append(UInt8(0x80 | ((codepoint >> 6) & 0x3F)))
+					result.append(UInt8(0x80 | (codepoint & 0x3F)))
+				} else if codepoint <= 0x10FFFF {
+					result.append(UInt8(0xF0 | (codepoint >> 18)))
+					result.append(UInt8(0x80 | ((codepoint >> 12) & 0x3F)))
+					result.append(UInt8(0x80 | ((codepoint >> 6) & 0x3F)))
+					result.append(UInt8(0x80 | (codepoint & 0x3F)))
+				}
+				hasEscapes = true
+				i += 6 + consumedExtra
+				continue
+			}
+		}
+		result.append(bytes[i])
+		i += 1
+	}
+
+	guard hasEscapes else { return text }
+	return String(decoding: result, as: UTF8.self)
 }
 
 #endif
