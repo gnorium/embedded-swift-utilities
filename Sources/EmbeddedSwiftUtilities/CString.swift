@@ -1,5 +1,3 @@
-#if os(WASI)
-
 // Keep this for C interop if needed, but prefer String.utf8.count where possible
 public func cStringLength(_ ptr: UnsafePointer<CChar>) -> Int {
 	var length = 0
@@ -516,5 +514,3 @@ public func decodeUnicodeEscapes(_ text: String) -> String {
 	guard hasEscapes else { return text }
 	return String(decoding: result, as: UTF8.self)
 }
-
-#endif

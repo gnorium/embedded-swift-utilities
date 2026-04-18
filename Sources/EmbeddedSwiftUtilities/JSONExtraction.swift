@@ -1,9 +1,6 @@
-// JSONProtocol extraction utilities for Embedded Swift (WASM)
+// JSONRepresentable extraction utilities for Embedded Swift (WASM)
 // Simple byte-based parsing without Foundation
-
-#if os(WASI)
-
-/// Extract a string value for a given key from a JSONProtocol string
+// /// Extract a string value for a given key from a JSONRepresentable string
 public func extractJSONString(_ json: String, key: String) -> String? {
 	let pattern = "\"\(key)\":\""
 
@@ -50,5 +47,3 @@ public func extractJSONString(_ json: String, key: String) -> String? {
 		return String(decoding: valueBytes, as: UTF8.self)
 	} ?? nil
 }
-
-#endif

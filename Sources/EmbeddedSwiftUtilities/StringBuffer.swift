@@ -1,6 +1,4 @@
 // Manual string building for embedded Swift to avoid Unicode normalization
-
-#if os(WASI)
 /// Builds strings from parts without triggering Unicode normalization
 public struct StringBuffer {
     private var buffer: [UInt8] = []
@@ -28,4 +26,3 @@ public func buildString(_ parts: (inout StringBuffer) -> Void) -> String {
     parts(&buffer)
     return buffer.build()
 }
-#endif

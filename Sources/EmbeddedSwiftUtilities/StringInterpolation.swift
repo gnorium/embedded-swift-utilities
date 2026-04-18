@@ -1,5 +1,3 @@
-#if os(WASI)
-
 extension String.StringInterpolation {
 	public mutating func appendInterpolation(_ value: Int) {
 		var num = value
@@ -145,5 +143,3 @@ extension String {
 		self.append(value ? "true" : "false")
 	}
 }
-
-#endif
