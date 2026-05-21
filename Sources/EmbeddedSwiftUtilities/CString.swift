@@ -345,7 +345,7 @@ public func stringRemovePrefix(_ string: String, _ prefix: String) -> String {
 }
 
 /// Safe integer parsing that avoids Unicode normalization
-public func safeParseInt(_ string: String) -> Int? {
+public func parseInt(_ string: String) -> Int? {
   let utf8 = Array(string.utf8)
   if utf8.isEmpty { return nil }
 
@@ -373,6 +373,51 @@ public func safeParseInt(_ string: String) -> Int? {
   }
 
   return isNegative ? -result : result
+}
+
+/// Convert String to Double without using stdlib strtod (which is unavailable/unstable in Embedded Swift)
+public func parseDouble(_ str: String) -> Double? {
+  var isNegative = false
+  var hasSeenDecimal = false
+  var integerPart = 0.0
+  var fractionalPart = 0.0
+  var divisor = 10.0
+  var hasDigits = false
+  
+  let bytes = Array(str.utf8)
+  if bytes.isEmpty { return nil }
+  
+  var i = 0
+  if bytes[0] == 45 { // '-'
+    isNegative = true
+    i += 1
+  } else if bytes[0] == 43 { // '+'
+    i += 1
+  }
+  
+  while i < bytes.count {
+    let byte = bytes[i]
+    if byte == 46 { // '.'
+      if hasSeenDecimal { return nil }
+      hasSeenDecimal = true
+    } else if byte >= 48 && byte <= 57 { // '0' - '9'
+      hasDigits = true
+      let digit = Double(byte - 48)
+      if hasSeenDecimal {
+        fractionalPart += digit / divisor
+        divisor *= 10.0
+      } else {
+        integerPart = integerPart * 10.0 + digit
+      }
+    } else {
+      return nil
+    }
+    i += 1
+  }
+  
+  guard hasDigits else { return nil }
+  let value = integerPart + fractionalPart
+  return isNegative ? -value : value
 }
 
 /// Convert Int to String without Unicode normalization
