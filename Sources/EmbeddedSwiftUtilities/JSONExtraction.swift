@@ -47,3 +47,37 @@ public func extractJSONString(_ json: String, key: String) -> String? {
     return String(decoding: valueBytes, as: UTF8.self)
   } ?? nil
 }
+
+/// Extract a numeric integer value for a given key from a JSON string (e.g. "width":123)
+public func extractJSONInt(_ json: String, key: String) -> Int? {
+  let utf8 = Array(json.utf8)
+  let pattern = Array("\"\(key)\":".utf8)
+  let patternCount = pattern.count
+  guard utf8.count >= patternCount else { return nil }
+
+  for i in 0...(utf8.count - patternCount) {
+    var match = true
+    for j in 0..<patternCount {
+      if utf8[i + j] != pattern[j] { match = false; break }
+    }
+    if !match { continue }
+
+    var valStart = i + patternCount
+    // Skip whitespace
+    while valStart < utf8.count, utf8[valStart] == 32 { valStart += 1 }
+    guard valStart < utf8.count else { return nil }
+    // Parse integer (optionally negative)
+    var isNeg = false
+    if utf8[valStart] == 45 { isNeg = true; valStart += 1 }
+    guard valStart < utf8.count else { return nil }
+    var result = 0
+    var pos = valStart
+    while pos < utf8.count, utf8[pos] >= 48, utf8[pos] <= 57 {
+      result = result * 10 + Int(utf8[pos] - 48)
+      pos += 1
+    }
+    guard pos > valStart else { return nil }
+    return isNeg ? -result : result
+  }
+  return nil
+}

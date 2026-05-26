@@ -15,6 +15,7 @@ Add EmbeddedSwiftUtilities to your `Package.swift`:
 ```swift
 dependencies: [
     .package(url: "https://github.com/gnorium/embedded-swift-utilities", branch: "main")
+- [iiif-core](https://github.com/gnorium/iiif-core) - IIIF Presentation API v3 types + deep zoom viewer
 ]
 ```
 
