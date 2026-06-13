@@ -344,6 +344,13 @@ public func stringRemovePrefix(_ string: String, _ prefix: String) -> String {
   return string
 }
 
+public func stringRemoveSuffix(_ string: String, _ suffix: String) -> String {
+  if stringEndsWith(string, suffix) {
+    return stringSubstring(string, from: 0, to: string.utf8.count - suffix.utf8.count)
+  }
+  return string
+}
+
 /// Safe integer parsing that avoids Unicode normalization
 public func parseInt(_ string: String) -> Int? {
   let utf8 = Array(string.utf8)
@@ -498,6 +505,13 @@ public func doubleToString(_ value: Double) -> String {
   }
 
   return res
+}
+
+public func stringIsAlphanumeric(_ string: String) -> Bool {
+  let bytes = Array(string.utf8)
+  if bytes.count != 1 { return false }
+  let b = bytes[0]
+  return (b >= 97 && b <= 122) || (b >= 65 && b <= 90) || (b >= 48 && b <= 57)
 }
 
 public func stringJoin(_ parts: [String], separator: String) -> String {
