@@ -535,13 +535,14 @@ public func stringJoin(_ parts: [String], separator: String) -> String {
   return String(decoding: buffer, as: UTF8.self)
 }
 
-/// Encode string to base64 (WASM-safe, no Foundation dependency)
+/// Encode string to base64 (Fast Foundation on server, WASM-safe pre-reserved on client)
 public func base64Encode(_ string: String) -> String {
   let input = Array(string.utf8)
   if input.isEmpty { return "" }
   let table: [UInt8] = Array(
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".utf8)
   var result: [UInt8] = []
+  result.reserveCapacity((input.count + 2) / 3 * 4)
   var i = 0
   while i + 2 < input.count {
     let b0 = input[i]

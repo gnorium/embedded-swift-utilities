@@ -3,49 +3,92 @@
 // /// Extract a string value for a given key from a JSONFormattable string
 public func extractJSONString(_ json: String, key: String) -> String? {
   let pattern = "\"\(key)\":\""
+  let patternBytes = Array(pattern.utf8)
+  let patternCount = patternBytes.count
 
-  return json.utf8.withContiguousStorageIfAvailable { jsonBytes -> String? in
-    let patternBytes = Array(pattern.utf8)
-    let patternCount = patternBytes.count
+  // Always copy to a contiguous Array — `withContiguousStorageIfAvailable` returns
+  // nil for many WASM/bridged strings (esp. large SSE chunk payloads), which used
+  // to make Proof/Vouch watch silently drop the entire transcript.
+  let jsonBytes = Array(json.utf8)
+  guard jsonBytes.count >= patternCount else { return nil }
 
-    guard jsonBytes.count >= patternCount else { return nil }
-
-    // Find pattern start
-    var startIndex = -1
-    for i in 0...(jsonBytes.count - patternCount) {
-      var match = true
-      for j in 0..<patternCount {
-        if jsonBytes[i + j] != patternBytes[j] {
-          match = false
-          break
-        }
-      }
-      if match {
-        startIndex = i + patternCount
+  // Find pattern start
+  var startIndex = -1
+  for i in 0...(jsonBytes.count - patternCount) {
+    var match = true
+    for j in 0..<patternCount {
+      if jsonBytes[i + j] != patternBytes[j] {
+        match = false
         break
       }
     }
-
-    guard startIndex >= 0 && startIndex < jsonBytes.count else { return nil }
-
-    // Find closing quote (handle escaped quotes)
-    var endIndex = startIndex
-    var prevWasBackslash = false
-    while endIndex < jsonBytes.count {
-      let byte = jsonBytes[endIndex]
-      if byte == 34 && !prevWasBackslash {  // 34 = '"'
-        break
-      }
-      prevWasBackslash = (byte == 92)  // 92 = '\'
-      endIndex += 1
+    if match {
+      startIndex = i + patternCount
+      break
     }
+  }
 
-    guard endIndex > startIndex && endIndex < jsonBytes.count else { return nil }
+  guard startIndex >= 0 && startIndex < jsonBytes.count else { return nil }
 
-    // Extract value
-    let valueBytes = Array(jsonBytes[startIndex..<endIndex])
-    return String(decoding: valueBytes, as: UTF8.self)
-  } ?? nil
+  // Find closing quote — honor even/odd backslash runs (\\") correctly.
+  var endIndex = startIndex
+  var escaped = false
+  while endIndex < jsonBytes.count {
+    let byte = jsonBytes[endIndex]
+    if byte == 92 {  // '\'
+      escaped = !escaped
+    } else if byte == 34 && !escaped {  // '"'
+      break
+    } else {
+      escaped = false
+    }
+    endIndex += 1
+  }
+
+  guard endIndex > startIndex && endIndex < jsonBytes.count else { return nil }
+
+  let valueBytes = Array(jsonBytes[startIndex..<endIndex])
+  let raw = String(decoding: valueBytes, as: UTF8.self)
+  return decodeJSONEscapes(raw)
+}
+
+/// Decode JSON string-body escapes (`\n`, `\"`, `\\`, `\uXXXX`, …) into real characters.
+/// Byte-level — Embedded Swift has no `Unicode.Scalar`.
+public func decodeJSONEscapes(_ raw: String) -> String {
+  let bytes = Array(raw.utf8)
+  var result: [UInt8] = []
+  result.reserveCapacity(bytes.count)
+  var i = 0
+  while i < bytes.count {
+    if bytes[i] != 92 {  // not '\'
+      result.append(bytes[i])
+      i += 1
+      continue
+    }
+    guard i + 1 < bytes.count else {
+      result.append(92)
+      break
+    }
+    switch bytes[i + 1] {
+    case 110: result.append(10)  // \n
+    case 114: result.append(13)  // \r
+    case 116: result.append(9)  // \t
+    case 34: result.append(34)  // \"
+    case 92: result.append(92)  // \\
+    case 47: result.append(47)  // \/
+    case 98: result.append(8)  // \b
+    case 102: result.append(12)  // \f
+    case 117:  // \uXXXX — keep for decodeUnicodeEscapes
+      result.append(92)
+      result.append(117)
+      i += 2
+      continue
+    default:
+      result.append(bytes[i + 1])
+    }
+    i += 2
+  }
+  return decodeUnicodeEscapes(String(decoding: result, as: UTF8.self))
 }
 
 /// Extract a numeric integer value for a given key from a JSON string (e.g. "width":123)
