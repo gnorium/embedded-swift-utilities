@@ -153,6 +153,11 @@ public func stringSubstring(_ string: String, from start: Int, to end: Int) -> S
   return String(decoding: slice, as: UTF8.self)
 }
 
+/// First `count` bytes of a string, or the whole string when it is shorter.
+public func stringPrefix(_ string: String, _ count: Int) -> String {
+  stringSubstring(string, from: 0, to: min(count, string.utf8.count))
+}
+
 public func stringContainsCaseInsensitive(_ haystack: String, _ needle: String) -> Bool {
   let nBytes = Array(needle.utf8)
   if nBytes.isEmpty { return true }
