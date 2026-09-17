@@ -2,7 +2,10 @@
 // Simple byte-based parsing without Foundation
 // /// Extract a string value for a given key from a JSONFormattable string
 public func extractJSONString(_ json: String, key: String) -> String? {
-  let pattern = "\"\(key)\":\""
+  // The quoted key only; the colon and the value's opening quote are matched
+  // with JSON's optional whitespace around them, so `"path": "x"` — how a
+  // model writes tool arguments — is found as readily as `"path":"x"`.
+  let pattern = "\"\(key)\""
   let patternBytes = Array(pattern.utf8)
   let patternCount = patternBytes.count
 
@@ -12,7 +15,11 @@ public func extractJSONString(_ json: String, key: String) -> String? {
   let jsonBytes = Array(json.utf8)
   guard jsonBytes.count >= patternCount else { return nil }
 
-  // Find pattern start
+  func isSpace(_ byte: UInt8) -> Bool {
+    byte == 32 || byte == 9 || byte == 10 || byte == 13
+  }
+
+  // Find the key, then `:` and `"` past any whitespace.
   var startIndex = -1
   for i in 0...(jsonBytes.count - patternCount) {
     var match = true
@@ -22,10 +29,15 @@ public func extractJSONString(_ json: String, key: String) -> String? {
         break
       }
     }
-    if match {
-      startIndex = i + patternCount
-      break
-    }
+    guard match else { continue }
+    var k = i + patternCount
+    while k < jsonBytes.count, isSpace(jsonBytes[k]) { k += 1 }
+    guard k < jsonBytes.count, jsonBytes[k] == 58 else { continue }  // ':'
+    k += 1
+    while k < jsonBytes.count, isSpace(jsonBytes[k]) { k += 1 }
+    guard k < jsonBytes.count, jsonBytes[k] == 34 else { continue }  // '"'
+    startIndex = k + 1
+    break
   }
 
   guard startIndex >= 0 && startIndex < jsonBytes.count else { return nil }
