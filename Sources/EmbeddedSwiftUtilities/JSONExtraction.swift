@@ -11,7 +11,7 @@ public func extractJSONString(_ json: String, key: String) -> String? {
 
   // Always copy to a contiguous Array — `withContiguousStorageIfAvailable` returns
   // nil for many WASM/bridged strings (esp. large SSE chunk payloads), which used
-  // to make Proof/Vouch watch silently drop the entire transcript.
+  // to make a watch silently drop the entire transcript.
   let jsonBytes = Array(json.utf8)
   guard jsonBytes.count >= patternCount else { return nil }
 
