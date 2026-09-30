@@ -56,6 +56,24 @@ public func stringCapitalized(_ string: String) -> String {
   return String(decoding: result, as: UTF8.self)
 }
 
+/// ASCII-only Title Case for a button's label (WASM-safe): every word's
+/// first letter capitalized, except a, an, the, and, or, of, to, in, on, for,
+/// with, by and as after the first word ("title form" → "Title Form").
+public func stringTitleCased(_ string: String) -> String {
+  let small: [String] = ["a", "an", "the", "and", "or", "of", "to", "in", "on", "for", "with", "by", "as"]
+  var words: [String] = []
+  var index = 0
+  for word in stringSplit(string, separator: " ") {
+    var isSmall = false
+    if index > 0 {
+      for candidate in small where stringEquals(candidate, word) { isSmall = true }
+    }
+    words.append(isSmall ? word : stringCapitalized(word))
+    index += 1
+  }
+  return stringJoin(words, separator: " ")
+}
+
 public func stringEquals(_ lhs: String, _ rhs: String) -> Bool {
   let lBytes = Array(lhs.utf8)
   let rBytes = Array(rhs.utf8)
