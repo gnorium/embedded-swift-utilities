@@ -1,5 +1,5 @@
 /// Binary-search over hardcoded Unicode letter ranges (Lu/Ll/Lt/Lm/Lo).
-/// Safe in embedded WASM — no stdlib normalization tables needed.
+/// Safe in embedded WASM—no stdlib normalization tables needed.
 /// Generated from Unicode 15 via Swift stdlib on macOS (680 ranges, U+0080–U+2FFFF).
 public func unicodeScalarIsLetter(_ value: UInt32) -> Bool {
   unicodeBinarySearch(unicodeLetterRanges, value)
@@ -200,7 +200,7 @@ private let unicodeDigitRanges: [(UInt32, UInt32)] = [
   (0x1FBF0,0x1FBF9),
 ]
 
-// mathSymbol (Sm) — 63 ranges
+// mathSymbol (Sm)—63 ranges
 private let unicodeMathSymbolRanges: [(UInt32, UInt32)] = [
   (0xAC,0xAC),(0xB1,0xB1),(0xD7,0xD7),(0xF7,0xF7),(0x3F6,0x3F6),(0x606,0x608),
   (0x2044,0x2044),(0x2052,0x2052),(0x207A,0x207C),(0x208A,0x208C),(0x2118,0x2118),
@@ -217,7 +217,7 @@ private let unicodeMathSymbolRanges: [(UInt32, UInt32)] = [
   (0x1EEF0,0x1EEF1),(0x1F8D0,0x1F8D8),
 ]
 
-// otherSymbol (So) — 193 ranges, emoji (U+1F000+) excluded at query time
+// otherSymbol (So)—193 ranges, emoji (U+1F000+) excluded at query time
 private let unicodeOtherSymbolRanges: [(UInt32, UInt32)] = [
   (0xA6,0xA6),(0xA9,0xA9),(0xAE,0xAE),(0xB0,0xB0),(0x482,0x482),(0x58D,0x58E),
   (0x60E,0x60F),(0x6DE,0x6DE),(0x6E9,0x6E9),(0x6FD,0x6FE),(0x7F6,0x7F6),(0x9FA,0x9FA),
@@ -251,14 +251,14 @@ private let unicodeOtherSymbolRanges: [(UInt32, UInt32)] = [
   (0x1DA76,0x1DA83),(0x1DA85,0x1DA86),(0x1E14F,0x1E14F),(0x1ECAC,0x1ECAC),(0x1ED2E,0x1ED2E),
 ]
 
-// letterNumber (Nl) — Roman numerals, Counting Rod, etc. — 13 ranges
+// letterNumber (Nl)—Roman numerals, Counting Rod, etc.—13 ranges
 private let unicodeLetterNumberRanges: [(UInt32, UInt32)] = [
   (0x16EE,0x16F0),(0x2160,0x2182),(0x2185,0x2188),(0x3007,0x3007),(0x3021,0x3029),
   (0x3038,0x303A),(0xA6E6,0xA6EF),(0x10140,0x10174),(0x10341,0x10341),(0x1034A,0x1034A),
   (0x103D1,0x103D5),(0x12400,0x1246E),(0x16FF4,0x16FF6),
 ]
 
-// otherNumber (No) — fractions, superscripts, historical numerals — 72 ranges
+// otherNumber (No)—fractions, superscripts, historical numerals—72 ranges
 private let unicodeOtherNumberRanges: [(UInt32, UInt32)] = [
   (0xB2,0xB3),(0xB9,0xB9),(0xBC,0xBE),(0x9F4,0x9F9),(0xB72,0xB77),(0xBF0,0xBF2),
   (0xC78,0xC7E),(0xD58,0xD5E),(0xD70,0xD78),(0xF2A,0xF33),(0x1369,0x137C),(0x17F0,0x17F9),

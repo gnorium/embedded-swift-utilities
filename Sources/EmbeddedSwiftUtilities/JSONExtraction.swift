@@ -3,13 +3,13 @@
 // /// Extract a string value for a given key from a JSONFormattable string
 public func extractJSONString(_ json: String, key: String) -> String? {
   // The quoted key only; the colon and the value's opening quote are matched
-  // with JSON's optional whitespace around them, so `"path": "x"` — how a
-  // model writes tool arguments — is found as readily as `"path":"x"`.
+  // with JSON's optional whitespace around them, so `"path": "x"`—how a
+  // model writes tool arguments—is found as readily as `"path":"x"`.
   let pattern = "\"\(key)\""
   let patternBytes = Array(pattern.utf8)
   let patternCount = patternBytes.count
 
-  // Always copy to a contiguous Array — `withContiguousStorageIfAvailable` returns
+  // Always copy to a contiguous Array—`withContiguousStorageIfAvailable` returns
   // nil for many WASM/bridged strings (esp. large SSE chunk payloads), which used
   // to make a watch silently drop the entire transcript.
   let jsonBytes = Array(json.utf8)
@@ -42,7 +42,7 @@ public func extractJSONString(_ json: String, key: String) -> String? {
 
   guard startIndex >= 0 && startIndex < jsonBytes.count else { return nil }
 
-  // Find closing quote — honor even/odd backslash runs (\\") correctly.
+  // Find closing quote—honor even/odd backslash runs (\\") correctly.
   var endIndex = startIndex
   var escaped = false
   while endIndex < jsonBytes.count {
@@ -65,7 +65,7 @@ public func extractJSONString(_ json: String, key: String) -> String? {
 }
 
 /// Decode JSON string-body escapes (`\n`, `\"`, `\\`, `\uXXXX`, …) into real characters.
-/// Byte-level — Embedded Swift has no `Unicode.Scalar`.
+/// Byte-level—Embedded Swift has no `Unicode.Scalar`.
 public func decodeJSONEscapes(_ raw: String) -> String {
   let bytes = Array(raw.utf8)
   var result: [UInt8] = []
@@ -90,7 +90,7 @@ public func decodeJSONEscapes(_ raw: String) -> String {
     case 47: result.append(47)  // \/
     case 98: result.append(8)  // \b
     case 102: result.append(12)  // \f
-    case 117:  // \uXXXX — keep for decodeUnicodeEscapes
+    case 117:  // \uXXXX—keep for decodeUnicodeEscapes
       result.append(92)
       result.append(117)
       i += 2
