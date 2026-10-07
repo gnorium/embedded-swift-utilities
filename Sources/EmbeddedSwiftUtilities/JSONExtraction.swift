@@ -136,3 +136,67 @@ public func extractJSONInt(_ json: String, key: String) -> Int? {
   }
   return nil
 }
+
+/// A JSON object's top-level fields in the order written: each key with its
+/// value—a string's decoded, anything else (a number, `true`, an array, an
+/// object) as written. Empty for anything that is not an object. Byte-level,
+/// as the rest of this file.
+public func jsonTopLevelFields(_ json: String) -> [(String, String)] {
+  let bytes = Array(json.utf8)
+  func isSpace(_ byte: UInt8) -> Bool { byte == 32 || byte == 9 || byte == 10 || byte == 13 }
+  var i = 0
+  while i < bytes.count, isSpace(bytes[i]) { i += 1 }
+  guard i < bytes.count, bytes[i] == 123 else { return [] }  // '{'
+  i += 1
+
+  // The end of the string whose opening quote is at `start`: the index of
+  // its closing quote.
+  func stringEnd(_ start: Int) -> Int? {
+    var k = start + 1
+    var escaped = false
+    while k < bytes.count {
+      if bytes[k] == 92 { escaped = !escaped } else if bytes[k] == 34 && !escaped { return k } else { escaped = false }
+      k += 1
+    }
+    return nil
+  }
+
+  var fields: [(String, String)] = []
+  while i < bytes.count {
+    while i < bytes.count, isSpace(bytes[i]) || bytes[i] == 44 { i += 1 }  // ','
+    guard i < bytes.count, bytes[i] == 34, let keyEnd = stringEnd(i) else { break }
+    let key = decodeJSONEscapes(String(decoding: Array(bytes[(i + 1)..<keyEnd]), as: UTF8.self))
+    i = keyEnd + 1
+    while i < bytes.count, isSpace(bytes[i]) { i += 1 }
+    guard i < bytes.count, bytes[i] == 58 else { break }  // ':'
+    i += 1
+    while i < bytes.count, isSpace(bytes[i]) { i += 1 }
+    guard i < bytes.count else { break }
+    if bytes[i] == 34 {
+      guard let end = stringEnd(i) else { break }
+      fields.append((key, decodeJSONEscapes(String(decoding: Array(bytes[(i + 1)..<end]), as: UTF8.self))))
+      i = end + 1
+      continue
+    }
+    // A number, a literal, an array or an object: up to the comma or brace
+    // that ends it at this depth, strings inside skipped whole.
+    let start = i
+    var depth = 0
+    while i < bytes.count {
+      let byte = bytes[i]
+      if byte == 34, let end = stringEnd(i) { i = end + 1; continue }
+      if byte == 91 || byte == 123 { depth += 1 }  // '[' '{'
+      if byte == 93 || byte == 125 {  // ']' '}'
+        if depth == 0 { break }
+        depth -= 1
+      }
+      if byte == 44 && depth == 0 { break }
+      i += 1
+    }
+    var end = i
+    while end > start, isSpace(bytes[end - 1]) { end -= 1 }
+    fields.append((key, String(decoding: Array(bytes[start..<end]), as: UTF8.self)))
+    if i < bytes.count, bytes[i] == 125 { break }
+  }
+  return fields
+}
