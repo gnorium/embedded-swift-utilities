@@ -7,8 +7,13 @@ public func cStringLength(_ ptr: UnsafePointer<CChar>) -> Int {
   return length
 }
 
+// The byte helpers below read the UTF-8 view in place. They used to copy each
+// string into an Array first, which a server render paid on every attribute,
+// CSS property and class it compared (an emptiness check copied the whole
+// string).
+
 public func stringIsEmpty(_ string: String) -> Bool {
-  return Array(string.utf8).isEmpty
+  return string.utf8.isEmpty
 }
 
 public func emptyString() -> String {
@@ -75,13 +80,10 @@ public func stringTitleCased(_ string: String) -> String {
 }
 
 public func stringEquals(_ lhs: String, _ rhs: String) -> Bool {
-  let lBytes = Array(lhs.utf8)
-  let rBytes = Array(rhs.utf8)
-  if lBytes.count != rBytes.count { return false }
-  for i in 0..<lBytes.count {
-    if lBytes[i] != rBytes[i] { return false }
-  }
-  return true
+  let l = lhs.utf8
+  let r = rhs.utf8
+  if l.count != r.count { return false }
+  return l.elementsEqual(r)
 }
 
 public func stringEquals(_ lhs: String?, _ rhs: String?) -> Bool {
@@ -127,23 +129,17 @@ public func stringContains(_ haystack: String, _ needle: String) -> Bool {
 
 public func stringStartsWith(_ string: String, _ prefix: StaticString) -> Bool {
   return prefix.withUTF8Buffer { buffer in
-    let sBytes = Array(string.utf8)
-    if sBytes.count < buffer.count { return false }
-    for i in 0..<buffer.count {
-      if sBytes[i] != buffer[i] { return false }
-    }
-    return true
+    let s = string.utf8
+    if s.count < buffer.count { return false }
+    return s.prefix(buffer.count).elementsEqual(buffer)
   }
 }
 
 public func stringStartsWith(_ string: String, _ prefix: String) -> Bool {
-  let sBytes = Array(string.utf8)
-  let pBytes = Array(prefix.utf8)
-  guard sBytes.count >= pBytes.count else { return false }
-  for i in 0..<pBytes.count {
-    if sBytes[i] != pBytes[i] { return false }
-  }
-  return true
+  let s = string.utf8
+  let p = prefix.utf8
+  guard s.count >= p.count else { return false }
+  return s.prefix(p.count).elementsEqual(p)
 }
 
 public func stringEndsWith(_ string: String, _ suffix: String) -> Bool {
